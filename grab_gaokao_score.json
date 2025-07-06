@@ -1,0 +1,204 @@
+{
+  "name": "grab_gaokao_score",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -20
+      ],
+      "id": "6ba41132-ca49-4727-8063-f6b062a44a21",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst pattern = /https?:\\/\\/[^\\s)]+\\.(?:jpg|jpeg|png|gif|webp)/gi;\nconst content = $input.first().json.stdout;\nconst urls = content.match(pattern)\n\nconst output = []\nif (urls) {\n  for(const url of urls) {\n    output.push({\n      json: {\n        url: url,\n        name: url.split(\"/\").pop()\n      }\n    });\n  }\n}\n\nreturn output;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        -20
+      ],
+      "id": "421b9320-e4a0-4d2f-9c07-c75f1153471d",
+      "name": "extract image urls",
+      "alwaysOutputData": false,
+      "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        -20
+      ],
+      "id": "b724fefc-d36c-400b-a4f6-2ce8929d5c2e",
+      "name": "download image"
+    },
+    {
+      "parameters": {
+        "command": "cd /Users/zouzheng/Downloads/GaoKao && source /Users/zouzheng/dev/workshop/ocr-llm/.venv/bin/activate &&  python /Users/zouzheng/dev/workshop/ocr-llm/gemini_batch_ocr.py -d ./download_images -o results.md"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        1320,
+        -20
+      ],
+      "id": "a9856b35-e58e-42be-8500-e2841d7d879a",
+      "name": "OCR"
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "=/Users/zouzheng/Downloads/GaoKao/download_images/{{ $json.name }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        1100,
+        -20
+      ],
+      "id": "a7e949b8-8a8f-4468-9a4c-ab7d67577a29",
+      "name": "save images"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "7a5f3f7a-0488-4456-9f91-23e7991095a9",
+              "leftValue": "={{ $binary.data.fileSize.split(\" \").first().toNumber() }}",
+              "rightValue": 100,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        -20
+      ],
+      "id": "65ab2e01-0762-405f-bda8-c0187c2fe6e0",
+      "name": "Filter out small images"
+    },
+    {
+      "parameters": {
+        "command": "crwl https://www.sceea.cn/Html/202506/Newsdetail_4335.html -o markdown"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        220,
+        -20
+      ],
+      "id": "f2029c25-9fa7-46ec-8c0f-c443b3c1e576",
+      "name": "crawl web page"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "crawl web page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "extract image urls": {
+      "main": [
+        [
+          {
+            "node": "download image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "download image": {
+      "main": [
+        [
+          {
+            "node": "Filter out small images",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OCR": {
+      "main": [
+        []
+      ]
+    },
+    "save images": {
+      "main": [
+        [
+          {
+            "node": "OCR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter out small images": {
+      "main": [
+        [
+          {
+            "node": "save images",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "crawl web page": {
+      "main": [
+        [
+          {
+            "node": "extract image urls",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "d0a35dc2-c878-41ef-9d43-3fd548bf12c1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a02f0e3c9c780ac37ad730c2e816a0241871f96e50b3ad1701eb83f018b4bd49"
+  },
+  "id": "eHZzHcu8DaabtEvz",
+  "tags": []
+}
